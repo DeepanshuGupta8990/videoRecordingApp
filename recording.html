@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Recording</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+        text-align: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+      }
+  
+      #container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+      }
+  
+      video {
+        width: 80%;
+        max-width: 800px;
+        height: auto;
+        border: 2px solid #333;
+        border-radius: 5px;
+        background-color: #000;
+        transform: scaleX(-1);
+      }
+      #recordedVideo {
+        width: 80%;
+        max-width: 800px;
+        height: auto;
+        border: 2px solid #333;
+        border-radius: 5px;
+        background-color: #000;
+        transform: scaleX(-1);
+        display: none;
+      }
+  
+      #timer {
+        font-size: 24px;
+        position: absolute;
+        top: 20px;
+        /* left: ; */
+        z-index: 343243;
+      }
+  
+      button {
+        font-size: 18px;
+        padding: 10px 20px;
+        margin: 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+  
+      #startRecord {
+        background-color: #4CAF50;
+        color: white;
+      }
+  
+      #playRecordedVideoBtn {
+        background-color: #4CAF50;
+        color: white;
+        display: none;
+      }
+  
+      #stopRecord {
+        background-color: #f44336;
+        color: white;
+      }
+  
+      #downloadLink {
+        font-size: 18px;
+        display: none;
+        margin: 10px;
+      }
+      #buttonCont{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: row;
+      }
+      button:active{
+        transition: 0.5s ease;
+        transform: scale(0.9);
+      }
+    </style>
+</head>
+
+<body>
+    <p id="timer">0:00</p>
+    <video autoplay playsinline id="liveVideo"></video>
+    <video autoplay controls id="recordedVideo"></video>
+    <div id="buttonCont">
+      <button id="startRecord">Start Recording</button>
+      <button id="stopRecord" disabled>Stop Recording</button>
+      <button id="playRecordedVideoBtn">Play recorded video</button>
+    </div>
+    <a id="downloadLink" style="display: none" download="recorded-video.webm">Download Video</a>
+    <script>
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            // Good to go
+        } else {
+            alert('getUserMedia() is not supported in your browser');
+        }
+
+        let errorCallback = function (e) {
+            console.log('Rejected!', e);
+        };
+
+        let mediaRecorder;
+        let VideoUrl;
+        const recordedChunks = [];
+
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then((stream) => {7
+                let video = document.querySelector('video');
+                video.srcObject = stream;
+                video.onloadedmetadata = function (e) {
+                    console.log('Ready to go');
+                };
+
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                        console.log(event.data)
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    VideoUrl = URL.createObjectURL(blob);
+                    const downloadLink = document.getElementById('downloadLink');
+                    downloadLink.href = VideoUrl;
+                    downloadLink.style.display = 'block';
+                };
+            })
+            .catch(errorCallback);
+
+        const startRecordButton = document.getElementById('startRecord');
+        const stopRecordButton = document.getElementById('stopRecord');
+        const playRecordedVideoBtn = document.getElementById('playRecordedVideoBtn');
+        const liveVideo = document.getElementById('liveVideo');
+        const recordedVideo = document.getElementById('recordedVideo');
+        const timer = document.getElementById('timer');
+        let setIntval;
+        const timerFunction = () => {
+            const currentTime1 = new Date();
+            let interval = '0:00'
+            setIntval = setInterval(() => {
+                const currentTime2 = new Date();
+                const elapsedMilliseconds = currentTime2 - currentTime1;
+                const minutes = Math.floor(elapsedMilliseconds / (1000 * 60));
+                const seconds = Math.floor((elapsedMilliseconds % (1000 * 60)) / 1000);
+                interval = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                timer.innerHTML = interval
+            }, 1000)
+        }
+
+        startRecordButton.addEventListener('click', () => {
+            mediaRecorder.start();
+            startRecordButton.disabled = true;
+            stopRecordButton.disabled = false;
+            playRecordedVideoBtn.style.display = 'none';
+            recordedVideo.style.display = 'none';
+            liveVideo.style.display = 'block';
+            timerFunction()
+        });
+
+        stopRecordButton.addEventListener('click', () => {
+            mediaRecorder.stop();
+            startRecordButton.disabled = false;
+            stopRecordButton.disabled = true;
+            playRecordedVideoBtn.style.display = 'block';
+            recordedVideo.style.display = 'block';
+            liveVideo.style.display = 'none';
+            clearInterval(setIntval);
+            
+        });
+        playRecordedVideoBtn.addEventListener('click', () => {
+            recordedVideo.src = VideoUrl;
+        });
+    </script>
+</body>
+
+</html>
